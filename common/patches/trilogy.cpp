@@ -2627,7 +2627,8 @@ DECODE(OP_SendLoginInfo)
 		OUT(corpseid);
 		OUT(spell_id);
 		OUT(attack_skill);
-		OUT(damage);
+		eq->damage = static_cast<uint16>(emu->damage);
+		OUT(is_PC);
 		FINISH_ENCODE();
 	}
 

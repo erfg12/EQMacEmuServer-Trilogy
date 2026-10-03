@@ -583,7 +583,16 @@ void ClientList::ClientUpdate(ZoneServer* zoneserver, ServerClientList_Struct* s
 		iterator.Advance();
 	}
 
-	if (scl->status != WorldSessionStatus::InZone) {
+	if (scl->status == WorldSessionStatus::InZone) {
+		cle = FindCLEByCharacterID(scl->charid);
+		if (!cle)
+			cle = FindCLEByAccountID(scl->AccountID);
+		if (cle) {
+			cle->Update(zoneserver, scl);
+			zoneserver->ChangeWID(scl->charid, cle->GetID());
+			return;
+		}
+	} else {
 		cle = FindCLEByCharacterID(scl->charid);
 		if (cle && cle->AccountID() == scl->AccountID) {
 			cle->LeavingZone(zoneserver, session_status);
