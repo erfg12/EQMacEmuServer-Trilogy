@@ -484,6 +484,14 @@ int main(int argc, char** argv) {
 						uint8 remote_address[4] = {};
 						uint16 remote_port = 0;
 						int setup_result = stream->GetRemoteAddress(remote_address, remote_port);
+						if (setup_result == RDPLIB_OK)
+						{
+							uint32 remote_ip = *(uint32*)remote_address;
+							uint32 version_bit = zone ? zone->GetAuthVersionByIP(remote_ip) : 0;
+							if (version_bit == EQ::versions::ClientVersionBit::bit_Trilogy || version_bit == EQ::versions::ClientVersionBit::bit_MacPC) {
+								stream->SetTranslator(Patches::GetTranslator(EQ::versions::ClientVersion::Trilogy));
+							}
+						}
 						// solar: the AK server used the default 10 second keepalive frequency.  the client also uses a 10 second keepalive.
 						// The 500ms configuration here is only to keep the network status meter in the client at 0.0%.
 						// This is a deviation from AKurate; the meter did not stay at 0.0% on AK.  Verified in AK pcaps.

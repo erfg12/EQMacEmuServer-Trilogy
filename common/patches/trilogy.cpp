@@ -95,7 +95,7 @@ DECODE(OP_SendLoginInfo)
 	{
 		SETUP_DIRECT_ENCODE(ZoneServerInfo_Struct, structs::ZoneServerInfo_Struct);
 		strcpy(eq->ip, emu->ip);
-		eq->port = ntohs(emu->port);
+		eq->port = emu->port;
 
 		FINISH_ENCODE();
 	}
@@ -187,7 +187,7 @@ DECODE(OP_SendLoginInfo)
 		strn0cpy(eq->zone, StaticGetZoneName(emu->zoneID), 15);
 		OUT(anon);
 		strn0cpy(eq->name, emu->name, 30);
-		eq->deity = 0;
+		eq->deity = emu->deity;
 		eq->race = emu->race;
 		OUT(size);
 		OUT(NPC);
@@ -352,7 +352,7 @@ DECODE(OP_SendLoginInfo)
 		outapp->SetOpcode(OP_PlayerProfile);
 		outapp->pBuffer = new uchar[10000];
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, sizeof(structs::PlayerProfile_Struct), outapp->pBuffer, 10000);
-		EncryptProfilePacket(outapp->pBuffer, outapp->size);
+		EncryptTrilogyProfilePacket(outapp->pBuffer, outapp->size);
 		LogNetcodeDetail("[STRUCTS] Player Profile Packet is {} bytes compressed", outapp->size);
 		result->SetPacket(&outapp);
 		delete[] __emu_buffer;
@@ -1278,7 +1278,7 @@ DECODE(OP_SendLoginInfo)
 		}
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct)*entrycount);
 		outapp->size = DeflatePacket((unsigned char*)out->pBuffer, out->size, outapp->pBuffer, sizeof(structs::Spawn_Struct)*entrycount);
-		EncryptZoneSpawnPacket(outapp->pBuffer, outapp->size);
+		EncryptTrilogyZoneSpawnPacket(outapp->pBuffer, outapp->size);
 		delete[] __emu_buffer;
 		delete out;
 		result->SetPacket(&outapp, reliable);
@@ -1341,7 +1341,7 @@ DECODE(OP_SendLoginInfo)
 
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct));
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, __packet->size, outapp->pBuffer, sizeof(structs::Spawn_Struct));
-		EncryptZoneSpawnPacket(outapp->pBuffer, outapp->size);
+		EncryptTrilogyZoneSpawnPacket(outapp->pBuffer, outapp->size);
 		result->SetPacket(&outapp, reliable);
 		delete[] __emu_buffer;
 		safe_delete(__packet);
