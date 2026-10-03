@@ -198,6 +198,9 @@ RDPStream::ReceiveResult RDPStream::Receive(EQApplicationPacket **packet, uint32
 		EQApplicationPacket *application_packet = new EQApplicationPacket(m_translator->EQToEmu(opcode), data + 2, bytes - 2);
 		application_packet->SetProtocolOpcode(opcode);
 
+		LogInfo("RDPStream::Receive: bytes {}, stream {}, flags {:#06x}, EQ opcode {:#06x}, emu opcode [{}] ({:#06x})",
+			bytes, message.StreamNumber(), message.Flags(), opcode, OpcodeManager::EmuToName(application_packet->GetOpcode()), application_packet->GetOpcode());
+
 		// translate packet eq -> emu
 		m_translator->Decode(application_packet);
 

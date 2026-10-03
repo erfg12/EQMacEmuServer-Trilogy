@@ -1,4 +1,6 @@
 D(OP_SendLoginInfo)
+D(OP_ApproveName)
+E(OP_ApproveName)
 E(OP_ApproveWorld)
 E(OP_EnterWorld)
 E(OP_ExpansionInfo)

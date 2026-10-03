@@ -14,6 +14,7 @@
 #include "trilogy_structs.h"
 #include "../rulesys.h"
 #include "../zone_numbers.h"
+#include "../zone_store.h"
 #include "../content/world_content_service.h"
 
 namespace Trilogy {
@@ -52,6 +53,26 @@ DECODE(OP_SendLoginInfo)
 		FINISH_DIRECT_DECODE();
 	}
 
+	DECODE(OP_ApproveName)
+	{
+		DECODE_LENGTH_EXACT(structs::NameApproval_Struct);
+		SETUP_DIRECT_DECODE(NameApproval_Struct, structs::NameApproval_Struct);
+		strn0cpy(emu->name, eq->charname, sizeof(emu->name));
+		emu->race = eq->race;
+		emu->class_ = eq->class_;
+		emu->unknown066 = 0;
+		emu->unknown070[0] = 0;
+		emu->unknown070[1] = 0;
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_ApproveName)
+	{
+		SETUP_DIRECT_ENCODE(NameApprovalReply_Struct, structs::NameApprovalReply_Struct);
+		OUT(approval);
+		FINISH_ENCODE();
+	}
+
 	DECODE(OP_EnterWorld)
 	{
 		unsigned char *__eq_buffer = __packet->pBuffer;
@@ -61,11 +82,12 @@ DECODE(OP_SendLoginInfo)
 			return;
 		}
 
-		__packet->size = sizeof(structs::EnterWorld_Struct);
+		__packet->size = sizeof(EnterWorld_Struct);
 		__packet->pBuffer = new unsigned char[__packet->size];
+		memset(__packet->pBuffer, 0, __packet->size);
 		EnterWorld_Struct *emu = (EnterWorld_Struct*)__packet->pBuffer;
 		structs::EnterWorld_Struct *eq = (structs::EnterWorld_Struct *) __eq_buffer;
-		strn0cpy(emu->name, eq->charname, 30);
+		strn0cpy(emu->name, eq->charname, sizeof(emu->name));
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -98,10 +120,7 @@ DECODE(OP_SendLoginInfo)
 	ENCODE(OP_ExpansionInfo)
 	{
 		SETUP_DIRECT_ENCODE(ExpansionInfo_Struct, structs::ExpansionInfo_Struct);
-		if (emu->Expansions > 3)
-			eq->Expansions = 3;
-		else
-			OUT(Expansions);
+		eq->Expansions = (emu->Expansions > 0 && emu->Expansions <= 3) ? emu->Expansions : 3;
 		FINISH_ENCODE();
 	}
 
@@ -348,6 +367,15 @@ DECODE(OP_SendLoginInfo)
 		IN(gender);
 		IN(race);
 		emu->zone_id = 0;
+		if (strlen(eq->current_zone) > 0) {
+			emu->zone_id = ZoneID(eq->current_zone);
+		}
+		if (!emu->zone_id && strlen(eq->start_point_zone[0]) > 0) {
+			emu->zone_id = ZoneID(eq->start_point_zone[0]);
+		}
+		if (!emu->zone_id && strlen(eq->bind_point_zone) > 0) {
+			emu->zone_id = ZoneID(eq->bind_point_zone);
+		}
 		strn0cpy(emu->name, eq->name, 64);
 		strn0cpy(emu->last_name, eq->Surname, 66);
 		uint32 deity = (uint8)eq->deity;

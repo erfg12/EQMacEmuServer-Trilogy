@@ -197,6 +197,12 @@ void Client::SendCharInfo() {
 	charcount = 0;
 	database.GetCharSelectInfo(GetAccountID(), cs, m_ClientVersionBit, charcount, mule);
 
+	LogInfo("SendCharInfo: AccountID [{}], charcount [{}]", GetAccountID(), charcount);
+	for (int i = 0; i < 10; ++i) {
+		LogInfo("  Slot [{}]: Name [{}], Level [{}], Class [{}], Race [{}], Zone [{}]",
+			i, cs->name[i], cs->level[i], cs->class_[i], cs->race[i], cs->zone[i]);
+	}
+
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
@@ -345,7 +351,7 @@ bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
 
 bool Client::HandleNameApprovalPacket(const EQApplicationPacket *app)
 {
-	if(app->Size() != sizeof(NameApproval_Struct)) {
+	if(app->size != sizeof(NameApproval_Struct)) {
 		LogError("Wrong size: HandleNameApprovalPacket, size= [{}], expected [{}]", app->size, sizeof(NameApproval_Struct));
 		return false;
 	}
@@ -779,6 +785,9 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 		}
 		case OP_WorldLogout:
 		{
+			if (m_ClientVersion == EQ::versions::ClientVersion::Trilogy) {
+				return true;
+			}
 			return false;
 		}
 		
@@ -1327,6 +1336,16 @@ bool Client::OPCharCreate(char *name, CharCreate_Struct *cc)
 		pp.x = pp.y = pp.z = -1;
 	}
 
+	if (pp.x == 0.0f && pp.y == 0.0f && pp.z == 0.0f) {
+		auto z = GetZone(pp.zone_id);
+		if (z) {
+			pp.x = z->safe_x;
+			pp.y = z->safe_y;
+			pp.z = z->safe_z;
+			pp.heading = z->safe_heading;
+		}
+	}
+
 	if (!pp.binds[0].zoneId)
 	{
 		pp.binds[0].zoneId = pp.zone_id;
@@ -1378,10 +1397,13 @@ bool Client::CheckCharCreateInfo(CharCreate_Struct *cc)
 		if (character_create_race_class_combos[i].Class == cc->class_ &&
 				character_create_race_class_combos[i].Race == cc->race &&
 				character_create_race_class_combos[i].Deity == cc->deity &&
-				character_create_race_class_combos[i].Zone == cc->zone_id &&
+				(cc->zone_id == 0 || character_create_race_class_combos[i].Zone == cc->zone_id) &&
 			((currentExpansions & character_create_race_class_combos[i].ExpansionRequired) == character_create_race_class_combos[i].ExpansionRequired || 
 				character_create_race_class_combos[i].ExpansionRequired == 0)) {
 			class_combo = character_create_race_class_combos[i];
+			if (cc->zone_id == 0) {
+				cc->zone_id = class_combo.Zone;
+			}
 			found = true;
 			break;
 		}

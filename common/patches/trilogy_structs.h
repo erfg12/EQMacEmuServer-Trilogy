@@ -2117,11 +2117,24 @@ namespace Trilogy {
 
 		struct NameApproval_Struct
 		{
-			/*000*/	char charname[64];
-			/*064*/	uint32 race;
-			/*068*/	uint32 class_;
-			/*072*/	uint32 deity;
-			/*076*/
+			/*000*/	char charname[30];
+			/*030*/	uint8 unknown1;
+			/*031*/	uint8 unknown2;
+			/*032*/	uint8 race;
+			/*033*/	uint8 unknown3;
+			/*034*/	uint8 unknown4;
+			/*035*/	uint8 unknown5;
+			/*036*/	uint8 class_;
+			/*037*/	uint8 unknown6;
+			/*038*/	uint8 unknown7;
+			/*039*/	uint8 unknown8;
+			/*040*/
+		};
+
+		struct NameApprovalReply_Struct
+		{
+			/*000*/ uint8 approval;
+			/*001*/
 		};
 
 		struct ConsumeItem_Struct
@@ -2586,7 +2599,10 @@ namespace Trilogy {
 			/*0125*/ uint8   WIS;						// Comment: WIS of Character
 			/*0126*/ int8	unused[2294];
 			/*2420*/ char   current_zone[15];			// Comment: 
-			/*2435*/ int8	unused1[1717];
+			/*2435*/ int8	unused1[405];
+			/*2840*/ char   bind_point_zone[20];
+			/*2860*/ char   start_point_zone[4][20];
+			/*2940*/ int8   unused2[1212];
 			/*4152*/ uint8   deity;
 			/*4153*/ int8   final_[3947];
 			/*8100*/
