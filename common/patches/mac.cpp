@@ -49,7 +49,7 @@ namespace Mac {
 		SETUP_DIRECT_DECODE(LoginInfo_Struct, structs::LoginInfo_Struct);
 		memcpy(emu->login_info, eq->AccountName, 64);
 		emu->macversion = len == 196 ? 8 : 4;
-		IN(zoning);
+		emu->zoning = (eq->zoning == 1 || __eq_buffer[188] == 1) ? 1 : 0;
 		FINISH_DIRECT_DECODE();
 	}
 

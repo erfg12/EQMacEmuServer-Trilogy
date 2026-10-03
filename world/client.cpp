@@ -252,6 +252,9 @@ bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
 
 	if (authenticated_cle)
 	{
+		if (authenticated_cle->Online() >= CLE_Status::Zoning)
+			is_player_zoning = true;
+
 		if (GetSessionLimit(authenticated_cle, is_player_zoning))
 			return false;
 

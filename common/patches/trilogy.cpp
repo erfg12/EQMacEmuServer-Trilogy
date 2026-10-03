@@ -46,10 +46,10 @@ namespace Trilogy {
 
 DECODE(OP_SendLoginInfo)
 	{
-		DECODE_LENGTH_EXACT(structs::LoginInfo_Struct);
+		DECODE_LENGTH_ATLEAST(structs::LoginInfo_Struct);
 		SETUP_DIRECT_DECODE(LoginInfo_Struct, structs::LoginInfo_Struct);
-		memcpy(emu->login_info, eq->AccountName, 30);
-		IN(zoning);
+		memcpy(emu->login_info, eq->AccountName, sizeof(emu->login_info));
+		emu->zoning = (eq->zoning == 1 || __eq_buffer[188] == 1) ? 1 : 0;
 		FINISH_DIRECT_DECODE();
 	}
 
