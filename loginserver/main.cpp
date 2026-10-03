@@ -81,6 +81,15 @@ void LoadServerConfig()
 	server.options.WorldAdminRegistrationTable(server.config.GetVariableString("schema", "world_admin_registration_table", "tblServerAdminRegistration"));
 	server.options.WorldServerTypeTable(server.config.GetVariableString("schema", "world_server_type_table", "tblServerListType"));
 	server.options.LoginPasswordSalt(server.config.GetVariableString("database", "salt", ""));
+
+	std::string login_ver = server.config.GetVariableString("client_configuration", "login_version", "");
+	if (login_ver.empty()) {
+		login_ver = server.config.GetVariableString("Old", "login_version", "");
+	}
+	if (login_ver.empty()) {
+		login_ver = server.config.GetVariableString("worldservers", "login_version", "");
+	}
+	server.options.LoginVersion(login_ver);
 }
 
 int main(int argc, char **argv)

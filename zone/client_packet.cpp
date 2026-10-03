@@ -51,6 +51,8 @@
 #include "../common/strings.h"
 #include "../common/zone_numbers.h"
 #include "../common/skill_caps.h"
+#include "../common/patches/patches.h"
+#include "../common/rdp/rdp_stream.h"
 #include "data_bucket.h"
 #include "event_codes.h"
 #include "guild_mgr.h"
@@ -949,9 +951,16 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 		}
 	}
 
-	// The auth version bit distinguishes Windows, Intel Mac and PPC clients.
-	SetClientVersion(EQ::versions::ClientVersion::Mac);
+	// The auth version bit distinguishes Windows, Intel Mac, PPC, and Trilogy clients.
 	m_ClientVersionBit = versionbit;
+	if (m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_Trilogy || m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_MacPC) {
+		SetClientVersion(EQ::versions::ClientVersion::Trilogy);
+	} else {
+		SetClientVersion(EQ::versions::ClientVersion::Mac);
+	}
+	if (m_stream) {
+		m_stream->SetTranslator(Patches::GetTranslator(m_ClientVersion));
+	}
 	std::string clientname = EQ::versions::ClientVersionName(EQ::versions::ConvertClientVersionBitToClientVersion(m_ClientVersionBit));
 	LogInfo("ClientVersionBit is : [{}] : [{}] ", m_ClientVersionBit, clientname.c_str());
 

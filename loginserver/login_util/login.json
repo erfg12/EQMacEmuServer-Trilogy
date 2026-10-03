@@ -39,7 +39,8 @@
   },
   "Old": {
     "port": 6000,
-    "opcodes": "login_opcodes_oldver.conf"
+    "opcodes": "login_opcodes_oldver.conf",
+    "login_version": "8-09-2001 14:25"
   },
   "schema": {
     "account_table": "tblLoginServerAccounts",

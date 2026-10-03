@@ -2,6 +2,8 @@
 
 #include "../eq_packet.h"
 #include "../eq_packet_translator.h"
+#include "../eqemu_logsys.h"
+#include "../opcodemgr.h"
 
 #include <cstring>
 #include <new>
@@ -80,8 +82,10 @@ int RDPStream::Send(EQApplicationPacket **packet, bool reliable)
 	// map opcode emu -> eq
 	if (opcode == 0)
 		opcode = m_translator->EmuToEQ(encoded->GetOpcode());
-	if (opcode == 0 || opcode == 0xffff)
+	if (opcode == 0 || opcode == 0xffff) {
+		LogError("RDPStream::Send: opcode {:#06x} ({}) translated to invalid EQ opcode {:#06x}", encoded->GetOpcode(), OpcodeManager::EmuToName(encoded->GetOpcode()), opcode);
 		return RDPLIB_CONNECTION_SEND_INVALID_ARGUMENT;
+	}
 	if (encoded->size > UINT32_MAX - 2)
 		return RDPLIB_CONNECTION_SEND_PAYLOAD_TOO_LARGE;
 
@@ -107,6 +111,9 @@ int RDPStream::Send(EQApplicationPacket **packet, bool reliable)
 	// RDPConnection latches the failure and reports it on the next Receive().
 	// this eventually causes the client to be linkdead in zone
 	int result = m_connection != nullptr ? m_connection->Send(data, bytes, SendStreamNumber, reliable ? RDPLIB_SEND_RELIABLE : RDPLIB_SEND_UNRELIABLE) : RDPLIB_ERROR_NOT_USABLE;
+
+	LogInfo("RDPStream::Send: emu opcode {:#06x} ({}), EQ opcode {:#06x}, bytes {}, reliable {} -> result {}",
+		encoded->GetOpcode(), OpcodeManager::EmuToName(encoded->GetOpcode()), opcode, bytes, reliable, result);
 
 	delete[] data;
 	return result;

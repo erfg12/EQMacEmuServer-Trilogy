@@ -26,7 +26,7 @@
 #include "../common/mutex.h"
 #include "../common/version.h"
 #include "../common/guilds.h"
-#include "../common/patches/mac.h"
+#include "../common/patches/patches.h"
 #include "../common/rdp/rdp_connection.h"
 #include "../common/rdp/rdp_endpoint.h"
 #include "../common/rdp/rdp_runtime.h"
@@ -379,14 +379,11 @@ int main(int argc, char** argv) {
 	}
 
 	// load opcodes and configure packet encode/decode
-	std::string opcode_file = fmt::format("{}/patch_Mac.conf", PathManager::Instance()->GetPatchPath());
-	EQPacketTranslator packet_translator;
-	if (!packet_translator.LoadOpcodes(opcode_file.c_str()))
+	if (!Patches::LoadAll())
 	{
-		LogError("Failed to load opcode file [{}]", opcode_file);
+		LogError("Failed to load patch opcode files");
 		return 1;
 	}
-	Mac::Register(packet_translator);
 
 	// RDP init
 	RDPRuntime rdp_runtime;
@@ -476,7 +473,7 @@ int main(int argc, char** argv) {
 						std::unique_ptr<RDPStream> stream;
 						try
 						{
-							stream.reset(new RDPStream(packet_translator, std::move(connection)));
+							stream.reset(new RDPStream(Patches::GetTranslator(EQ::versions::ClientVersion::Mac), std::move(connection)));
 						}
 						catch (const std::bad_alloc &)
 						{

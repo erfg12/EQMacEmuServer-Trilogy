@@ -211,11 +211,22 @@ void Client::Handle_SessionReady()
 
 	m_client_status = cs_waiting_for_login;
 
-	char buf[20];
-	strcpy(buf, "12-4-2002 1800");
+	char buf[64] = {0};
+	std::string ver = server.options.GetLoginVersion();
+	if (ver.empty() && server.db) {
+		char db_buf[64] = {0};
+		if (server.db->GetVariable("LoginVersion", db_buf, sizeof(db_buf))) {
+			ver = db_buf;
+		}
+	}
+	if (ver.empty()) {
+		ver = "8-09-2001 14:25";
+	}
+
+	strncpy(buf, ver.c_str(), sizeof(buf) - 1);
 	auto outapp = new EQApplicationPacket(OP_SessionReady, strlen(buf) + 1);
 	strcpy((char*)outapp->pBuffer, buf);
-	LogInfo("EQMac Stream selected.");
+	LogInfo("SessionReady sent version timestamp: [{}]", buf);
 	QueuePacket(outapp);
 	delete outapp;
 }
@@ -296,7 +307,7 @@ void Client::Handle_Login(const char* data, unsigned int size, std::string clien
 		username = userpass.substr(0, userpass.find("/"));
 		password = userpass.substr(userpass.find("/") + 1);
 		platform = "PCT";
-		m_client_mac_version = pc;
+		m_client_mac_version = trilogy;
 	}
 	std::string userandpass = m_salt.Salt(password);
 	m_client_status = cs_logged_in;

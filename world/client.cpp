@@ -20,6 +20,7 @@
 #include "../common/zone_store.h"
 #include "../common/content/world_content_service.h"
 #include "../common/skill_caps.h"
+#include "../common/patches/patches.h"
 
 #include "client.h"
 #include "worlddb.h"
@@ -254,12 +255,28 @@ bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
 		if(cle->Online() < CLE_Status::Online)
 			cle->SetOnline();
 		
-		// All supported clients use the Mac packet protocol.  The login packet distinguishes Windows, Intel Mac, and PowerPC.
-		if( cle->GetMacClientVersion() != EQ::versions::ClientVersion::MacPC )
+		// Check for Trilogy or Mac client versions and assign the stream's packet translator.
+		if (cle->GetMacClientVersion() == EQ::versions::ClientVersionBit::bit_Trilogy ||
+		    cle->GetMacClientVersion() == EQ::versions::ClientVersionBit::bit_MacPC)
 		{
-			cle->SetMacClientVersion(login_info->macversion);
+			m_ClientVersion = EQ::versions::ClientVersion::Trilogy;
+			m_ClientVersionBit = cle->GetMacClientVersion();
+			if (m_stream) {
+				m_stream->SetTranslator(Patches::GetTranslator(m_ClientVersion));
+			}
 		}
-		m_ClientVersionBit = cle->GetMacClientVersion();
+		else
+		{
+			if (cle->GetMacClientVersion() != EQ::versions::ClientVersionBit::bit_MacPC)
+			{
+				cle->SetMacClientVersion(login_info->macversion);
+			}
+			m_ClientVersionBit = cle->GetMacClientVersion();
+			m_ClientVersion = EQ::versions::ClientVersion::Mac;
+			if (m_stream) {
+				m_stream->SetTranslator(Patches::GetTranslator(m_ClientVersion));
+			}
+		}
 
 		LogInfo("ClientVersionBit is: [{}]", m_ClientVersionBit);
 		LogInfo("Logged in. Mode= [{}]", is_player_zoning ? "(Zoning)" : "(CharSel)");
@@ -284,7 +301,9 @@ bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
 		mule = false;
 		database.GetAccountRestriction(cle->AccountID(), expansion, mule);
 
-		SendLogServer();
+		if (m_ClientVersion == EQ::versions::ClientVersion::Mac) {
+			SendLogServer();
+		}
 		SendApproveWorld();
 
 
@@ -698,6 +717,13 @@ bool Client::HandlePacket(const EQApplicationPacket *app) {
 
 	EmuOpcode opcode = app->GetOpcode();
 
+	LogInfo(
+		"HandlePacket: [{}] [{:#06x}] Size [{}]",
+		OpcodeManager::EmuToName(app->GetOpcode()),
+		app->GetProtocolOpcode(),
+		app->Size()
+	);
+
 	LogPacketClientServer(
 		"[{}] [{:#06x}] Size [{}] {}",
 		OpcodeManager::EmuToName(app->GetOpcode()),
@@ -819,13 +845,14 @@ bool Client::Process()
 		transport_ended = true;
 		if (receive_result == RDPStream::PeerClosed)
 		{
-			LogNetcode("World client [{}] closed its RDP connection", GetAccountName());
+			LogInfo("World client [{}] closed its RDP connection (PeerClosed)", GetAccountName());
 		}
 		else
 		{
-			LogNetcode(
-				"World client [{}] lost its RDP connection, reason [{:#010x}]",
+			LogInfo(
+				"World client [{}] lost its RDP connection, receive_result [{}], disconnect_reason [{:#010x}]",
 				GetAccountName(),
+				static_cast<int>(receive_result),
 				disconnect_reason
 			);
 		}
@@ -1106,10 +1133,7 @@ void Client::SendToStream(EQApplicationPacket **packet, bool reliable)
 	}
 
 	int result = m_stream->Send(packet, reliable);
-	if (result != RDPLIB_OK)
-	{
-		LogNetcode("Unable to send opcode [{}], RDP result [{}]", OpcodeManager::EmuToName(opcode), result);
-	}
+	LogInfo("SendToStream: opcode [{}] ({:#06x}), reliable [{}] -> result [{}]", OpcodeManager::EmuToName(opcode), opcode, reliable, result);
 }
 
 void Client::QueuePacket(const EQApplicationPacket* app, bool ack_req) {
