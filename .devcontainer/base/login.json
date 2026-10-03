@@ -47,7 +47,6 @@
       "account_table": "tblLoginServerAccounts",
       "world_registration_table": "tblWorldServerRegistration",
       "world_admin_registration_table": "tblServerAdminRegistration",
-      "world_server_type_table": "tblServerListType",
-      "loginserver_setting_table": "tblloginserversettings"
+      "world_server_type_table": "tblServerListType"
     }
   }
