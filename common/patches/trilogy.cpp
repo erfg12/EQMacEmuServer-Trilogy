@@ -345,6 +345,29 @@ DECODE(OP_SendLoginInfo)
 		OUT_array(spellSlotRefresh, structs::MAX_PP_MEMSPELL);
 		eq->eqbackground = 0;
 
+		for (r = 0; r < 30; r++) {
+			eq->inventory[r] = emu->inventory[r];
+			eq->invItemProprieties[r].charges = emu->invItemProperties[r].charges;
+			eq->inventoryitemPointers[r] = 0;
+		}
+		for (r = 0; r < 80; r++) {
+			eq->containerinv[r] = emu->containerinv[r];
+			eq->bagItemProprieties[r].charges = emu->bagItemProperties[r].charges;
+		}
+		for (r = 0; r < 10; r++) {
+			eq->cursorbaginventory[r] = emu->cursorbaginventory[r];
+			eq->cursorItemProprieties[r].charges = emu->cursorItemProperties[r].charges;
+		}
+		for (r = 0; r < 8; r++) {
+			eq->bank_inv[r] = emu->bank_inv[r];
+			eq->bankinvitemproperties[r].charges = emu->bankinvitemproperties[r].charges;
+			eq->bankinvitemPointers[r] = 0;
+		}
+		for (r = 0; r < 80; r++) {
+			eq->bank_cont_inv[r] = emu->bank_cont_inv[r];
+			eq->bankbagitemproperties[r].charges = emu->bankbagitemproperties[r].charges;
+		}
+
 		LogNetcodeDetail("[STRUCTS] Player Profile Packet is {} bytes uncompressed", sizeof(structs::PlayerProfile_Struct));
 
 		CRC32::SetEQChecksum(__packet->pBuffer, sizeof(structs::PlayerProfile_Struct));
@@ -1738,10 +1761,18 @@ DECODE(OP_SendLoginInfo)
 
 	ENCODE(OP_CharInventory)
 	{
-
 		//consume the packet
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
+
+		if (in->size == 0)
+		{
+			auto outapp = new EQApplicationPacket(OP_CharInventory, 2);
+			*((uint16 *)outapp->pBuffer) = 0;
+			result->SetPacket(&outapp, reliable);
+			delete in;
+			return;
+		}
 
 		//store away the emu struct
 		unsigned char *__emu_buffer = in->pBuffer;
@@ -1754,33 +1785,38 @@ DECODE(OP_SendLoginInfo)
 			return;
 		}
 
-		int pisize = sizeof(structs::PlayerItems_Struct) + (250 * sizeof(structs::PlayerItemsPacket_Struct));
-		structs::PlayerItems_Struct* pi = (structs::PlayerItems_Struct*) new uchar[pisize];
-		memset(pi, 0, pisize);
-
 		EQ::InternalSerializedItem_Struct *eq = (EQ::InternalSerializedItem_Struct *)in->pBuffer;
 		//do the transform...
 		std::string trilogy_item_string;
-		int r;
-		for (r = 0; r < itemcount; r++, eq++)
+		int valid_item_count = 0;
+		for (int r = 0; r < itemcount; r++, eq++)
 		{
 			structs::Item_Struct* trilogy_item = TrilogyItem((EQ::ItemInstance*)eq->inst, eq->slot_id);
 
-			if (trilogy_item != 0)
+			if (trilogy_item != nullptr)
 			{
-				char *trilogy_item_char = reinterpret_cast<char*>(trilogy_item);
-				trilogy_item_string.append(trilogy_item_char, sizeof(structs::Item_Struct));
+				structs::PlayerItemsPacket_Struct item_pkt;
+				memset(&item_pkt, 0, sizeof(structs::PlayerItemsPacket_Struct));
+				item_pkt.opcode = 0x2164; // OP_ItemPacket
+				memcpy(&item_pkt.item, trilogy_item, sizeof(structs::Item_Struct));
+
+				char *trilogy_item_char = reinterpret_cast<char*>(&item_pkt);
+				trilogy_item_string.append(trilogy_item_char, sizeof(structs::PlayerItemsPacket_Struct));
+				valid_item_count++;
+
+				LogInfo("Trilogy ENCODE(OP_CharInventory): Item [{}], Slot [{}], ID [{}]",
+					trilogy_item->Name, trilogy_item->equipSlot, trilogy_item->ID);
+
 				safe_delete_array(trilogy_item);
 			}
 		}
-		int32 length = 5000;
+
+		int32 length = 16384;
 		int buffer = 2;
 
-		memcpy(pi->packets, trilogy_item_string.c_str(), trilogy_item_string.length());
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_CharInventory, length);
-		outapp->size = buffer + DeflatePacket((uchar*)pi->packets, itemcount * sizeof(structs::Item_Struct), &outapp->pBuffer[buffer], length - buffer);
-		outapp->pBuffer[0] = itemcount;
-		safe_delete_array(pi);
+		outapp->size = buffer + DeflatePacket((uchar*)trilogy_item_string.c_str(), trilogy_item_string.length(), &outapp->pBuffer[buffer], length - buffer);
+		*((uint16*)outapp->pBuffer) = valid_item_count;
 
 		result->SetPacket(&outapp, reliable);
 		delete in;
