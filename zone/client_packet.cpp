@@ -703,17 +703,12 @@ void Client::Handle_Connect_OP_ReqClientSpawn(const EQApplicationPacket *app)
 {
 	conn_state = ClientSpawnRequested;
 
-	auto outapp = new EQApplicationPacket;
-	if (entity_list.SendZoneDoorsBulk(outapp, this))
-	{
-		QueuePacket(outapp);
-	}
-	safe_delete(outapp);
+	entity_list.SendZoneDoors(this);
 
 	entity_list.SendZoneObjects(this);
 	SendZonePoints();
 
-	outapp = new EQApplicationPacket(OP_SendExpZonein, 0);
+	auto outapp = new EQApplicationPacket(OP_SendExpZonein, 0);
 	FastQueuePacket(&outapp);
 
 	conn_state = ZoneContentsSent;
@@ -2715,10 +2710,28 @@ void Client::Handle_OP_ClickDoor(const EQApplicationPacket *app)
 		return;
 	}
 	ClickDoor_Struct* cd = (ClickDoor_Struct*)app->pBuffer;
+	LogInfo("Handle_OP_ClickDoor: [{}] clicked door cd->doorid=[{}], cd->item_id=[{}], cd->player_id=[{}]",
+		GetName(), cd->doorid, cd->item_id, cd->player_id);
+
 	Doors* currentdoor = entity_list.FindDoor(cd->doorid);
 	if (!currentdoor)
 	{
-		Message(Chat::White, "Unable to find door, please notify a GM (DoorID: [{}]).", cd->doorid);
+		currentdoor = entity_list.FindNearestDoor(this);
+		if (currentdoor) {
+			auto diff = GetPosition() - currentdoor->GetPosition();
+			float dist_sq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+			if (dist_sq > 900.0f) { // More than 30 units away
+				currentdoor = nullptr;
+			} else {
+				LogInfo("Handle_OP_ClickDoor: Door not found by id [{}], but matched nearest door [{}] (db_id: {}, door_id: {}, dist_sq: {:.2f})",
+					cd->doorid, currentdoor->GetDoorName(), currentdoor->GetDoorDBID(), currentdoor->GetDoorID(), dist_sq);
+			}
+		}
+	}
+
+	if (!currentdoor)
+	{
+		Message(Chat::White, "Unable to find door, please notify a GM (DoorID: %u).", cd->doorid);
 		return;
 	}
 

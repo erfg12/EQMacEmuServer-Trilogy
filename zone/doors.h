@@ -43,6 +43,7 @@ public:
 	uint32 GetDoorParam() { return door_param; }
 	uint32 GetEntityID() { return entity_id; }
 	uint32 GetKeyItem() { return key_item_id; }
+	void CreateSpawnPacket(EQApplicationPacket* app);
 	void DumpDoor();
 	void ForceClose(Mob *sender, bool alt_mode = false);
 	void ForceOpen(Mob *sender, bool alt_mode = false);

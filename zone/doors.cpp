@@ -860,3 +860,25 @@ float Doors::GetZ()
 {
 	return m_position.z;
 }
+
+void Doors::CreateSpawnPacket(EQApplicationPacket* app)
+{
+	app->SetOpcode(OP_SpawnDoor);
+	safe_delete_array(app->pBuffer);
+	app->pBuffer = new uchar[sizeof(Door_Struct)];
+	app->size = sizeof(Door_Struct);
+	Door_Struct* nd = (Door_Struct*)app->pBuffer;
+	memset(nd, 0, sizeof(Door_Struct));
+	strncpy(nd->name, GetDoorName(), 16);
+	nd->pos_y = m_position.y;
+	nd->pos_x = m_position.x;
+	nd->pos_z = m_position.z;
+	nd->heading = m_position.w;
+	nd->incline = GetIncline();
+	nd->size = GetSize() == 0 ? 100 : GetSize();
+	nd->doorid = GetDoorID();
+	nd->opentype = GetOpenType();
+	nd->doorIsOpen = GetInvertState() ? !IsDoorOpen() : IsDoorOpen();
+	nd->inverted = GetInvertState();
+	nd->parameter = GetDoorParam();
+}

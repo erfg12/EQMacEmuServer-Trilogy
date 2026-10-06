@@ -1960,10 +1960,10 @@ namespace Trilogy {
 
 		struct Door_Struct
 		{
-			/*000*/ char    name[16];            // Filename of Door // Was 10char long before... added the 6 in the next unknown to it: Daeken M. BlackBlade
-			/*016*/ float   yPos;               // y loc
-			/*020*/ float   xPos;               // x loc
-			/*024*/ float   zPos;               // z loc
+			/*000*/ char    name[16];            // Filename of Door
+			/*016*/ float   pos_y;               // y loc
+			/*020*/ float   pos_x;               // x loc
+			/*024*/ float   pos_z;               // z loc
 			/*028*/ float	heading;
 			/*032*/ uint16  incline;
 			/*034*/ uint16	size;
@@ -2071,12 +2071,9 @@ namespace Trilogy {
 
 		struct ClickDoor_Struct
 		{
-			/*000*/	uint8	doorid;
-			/*001*/	uint8	unknown001[3];
-			/*004*/	uint16	item_id;
-			/*006*/ uint8	unknown004[2];
-			/*008*/	uint16	player_id;
-			/*010*/ uint8	unknown010[2];
+			/*000*/	uint32	doorid;
+			/*004*/	uint32	item_id;
+			/*008*/	uint32	player_id;
 			/*012*/
 		};
 

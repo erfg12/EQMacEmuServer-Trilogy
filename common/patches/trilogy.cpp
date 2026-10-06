@@ -1654,6 +1654,8 @@ DECODE(OP_SendLoginInfo)
 		IN(doorid);
 		IN(item_id);
 		IN(player_id);
+		LogInfo("Trilogy DECODE(OP_ClickDoor): raw bytes [{}], doorid=[{}], item_id=[{}], player_id=[{}]",
+			Strings::EscapePair((const char*)__eq_buffer, sizeof(structs::ClickDoor_Struct)), eq->doorid, eq->item_id, eq->player_id);
 		FINISH_DIRECT_DECODE();
 	}
 

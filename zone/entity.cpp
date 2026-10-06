@@ -935,14 +935,45 @@ void EntityList::ListDoors(Client* c)
 	return;
 }
 
-Doors *EntityList::FindDoor(uint8 door_id)
+Doors *EntityList::FindDoor(uint32 door_id)
 {
-	if (door_id < 0 || door_list.empty())
+	if (door_list.empty())
 		return nullptr;
 
 	auto it = door_list.begin();
 	while (it != door_list.end()) {
-		if (it->second->GetDoorID() == door_id)
+		if (it->second && it->second->GetDoorID() == door_id)
+			return it->second;
+		++it;
+	}
+
+	// Fallback to database ID
+	it = door_list.begin();
+	while (it != door_list.end()) {
+		if (it->second && it->second->GetDoorDBID() == door_id)
+			return it->second;
+		++it;
+	}
+
+	// Fallback to entity ID
+	it = door_list.begin();
+	while (it != door_list.end()) {
+		if (it->second && it->second->GetEntityID() == door_id)
+			return it->second;
+		++it;
+	}
+
+	return nullptr;
+}
+
+Doors *EntityList::FindDoorByDBID(uint32 db_id)
+{
+	if (door_list.empty())
+		return nullptr;
+
+	auto it = door_list.begin();
+	while (it != door_list.end()) {
+		if (it->second && it->second->GetDoorDBID() == db_id)
 			return it->second;
 		++it;
 	}
@@ -1024,19 +1055,23 @@ bool EntityList::SendZoneDoorsBulk(EQApplicationPacket* app, Client *client)
 	while (it != door_list.end()) {
 		door = it->second;
 		if (door && (door->GetClientVersionMask() & mask_test)) {
-			memcpy(nd->name, door->GetDoorName(), 16);
+			memset(nd, 0, sizeof(Door_Struct));
+			strncpy(nd->name, door->GetDoorName(), 16);
 			auto position = door->GetPosition();
-			nd->xPos = position.x;
-			nd->yPos = position.y;
-			nd->zPos = position.z;
+			nd->pos_x = position.x;
+			nd->pos_y = position.y;
+			nd->pos_z = position.z;
 			nd->heading = position.w;			
 			nd->incline = door->GetIncline();
-			nd->size = door->GetSize();
+			nd->size = door->GetSize() == 0 ? 100 : door->GetSize();
 			nd->doorid = door->GetDoorID();
 			nd->opentype = door->GetOpenType();
 			nd->doorIsOpen = door->GetInvertState() ? !door->IsDoorOpen() : door->IsDoorOpen();
 			nd->inverted = door->GetInvertState();
 			nd->parameter = door->GetDoorParam();
+
+			LogInfo("SendZoneDoorsBulk: door db_id=[{}], door_id=[{}], name=[{}], pos=({:.2f}, {:.2f}, {:.2f}), hdg={:.2f}, size=[{}], opentype=[{}]",
+				door->GetDoorDBID(), door->GetDoorID(), nd->name, position.x, position.y, position.z, position.w, nd->size, door->GetOpenType());
 			
 			memcpy(packet+length,doorstruct,sizeof(Door_Struct));
 			length += sizeof(Door_Struct);
@@ -1062,6 +1097,25 @@ bool EntityList::SendZoneDoorsBulk(EQApplicationPacket* app, Client *client)
 	ds->count = count;
 
 	return true;
+}
+
+void EntityList::SendZoneDoors(Client *client)
+{
+	uint32 mask_test = client->ClientVersionBit();
+	EQApplicationPacket app;
+	auto it = door_list.begin();
+	while (it != door_list.end()) {
+		if (it->second && (it->second->GetClientVersionMask() & mask_test)) {
+			it->second->CreateSpawnPacket(&app);
+			LogInfo("SendZoneDoors: door db_id=[{}], door_id=[{}], name=[{}], pos=({:.2f}, {:.2f}, {:.2f}), hdg={:.2f}, size=[{}], opentype=[{}]",
+				it->second->GetDoorDBID(), it->second->GetDoorID(), it->second->GetDoorName(),
+				it->second->GetPosition().x, it->second->GetPosition().y, it->second->GetPosition().z,
+				it->second->GetPosition().w, it->second->GetSize() == 0 ? 100 : it->second->GetSize(), it->second->GetOpenType());
+			client->QueuePacket(&app);
+			safe_delete_array(app.pBuffer);
+		}
+		++it;
+	}
 }
 
 Entity *EntityList::GetEntityMob(uint16 id)
@@ -2388,13 +2442,7 @@ void EntityList::RespawnAllDoors()
 	auto it = client_list.begin();
 	while (it != client_list.end()) {
 		if (it->second) {
-			auto outapp = new EQApplicationPacket();
-			if (SendZoneDoorsBulk(outapp, it->second)) {
-				it->second->FastQueuePacket(&outapp);
-			}
-			else {
-				safe_delete(outapp);
-			}
+			SendZoneDoors(it->second);
 		}
 		++it;
 	}

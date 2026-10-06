@@ -226,13 +226,15 @@ public:
 	void	ClearAreas();
 	void	ReloadMerchants();
 	void	ProcessProximitySay(const char *Message, Client *c, uint8 language = 0);
-	Doors *FindDoor(uint8 door_id);
+	Doors *FindDoor(uint32 door_id);
+	Doors *FindDoorByDBID(uint32 db_id);
 	Doors	*FindNearestDoor(Client* c);
 	void	ListDoors(Client* c);
 	glm::vec3	GetDoorLoc(Client* c, int doorid);
 	Object *FindObject(uint32 object_id);
 	Object*	FindNearbyObject(float x, float y, float z, float radius);
 	bool	SendZoneDoorsBulk(EQApplicationPacket* app, Client *client);
+	void	SendZoneDoors(Client* client);
 	void	SendTraders(Client* client);
 	void	SendIllusionedPlayers(Client* client);
 	void	SendHelms(Client* client); // This displays other player's helms for this character.
