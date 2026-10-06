@@ -354,7 +354,7 @@ DECODE(OP_SendLoginInfo)
 		outapp->size = DeflatePacket((unsigned char*)__packet->pBuffer, sizeof(structs::PlayerProfile_Struct), outapp->pBuffer, 10000);
 		EncryptTrilogyProfilePacket(outapp->pBuffer, outapp->size);
 		LogNetcodeDetail("[STRUCTS] Player Profile Packet is {} bytes compressed", outapp->size);
-		result->SetPacket(&outapp);
+		result->SetPacket(&outapp, reliable);
 		delete[] __emu_buffer;
 		delete __packet;
 	}
@@ -1127,7 +1127,9 @@ DECODE(OP_SendLoginInfo)
 		uint32 __i = 0;
 		__i++; /* to shut up compiler */
 
-		int msglen = __packet->size - sizeof(structs::SpecialMesg_Struct);
+		int msglen = __packet->size - sizeof(SpecialMesg_Struct);
+		if (msglen < 0)
+			msglen = 0;
 		int len = sizeof(structs::SpecialMesg_Struct) + msglen + 4;
 		__packet->pBuffer = new unsigned char[len];
 		__packet->size = len;
@@ -1140,9 +1142,16 @@ DECODE(OP_SendLoginInfo)
 
 	DECODE(OP_ChannelMessage)
 	{
+		if (__packet->size < sizeof(structs::ChannelMessage_Struct))
+		{
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
 		unsigned char *__eq_buffer = __packet->pBuffer;
 		structs::ChannelMessage_Struct *eq = (structs::ChannelMessage_Struct *) __eq_buffer;
-		int msglen = __packet->size - sizeof(structs::ChannelMessage_Struct) - 4;
+		int msglen = __packet->size - sizeof(structs::ChannelMessage_Struct);
+		if (msglen < 0)
+			msglen = 0;
 		int len = msglen + sizeof(ChannelMessage_Struct);
 		__packet->size = len;
 		__packet->pBuffer = new unsigned char[len];
@@ -1279,7 +1288,7 @@ DECODE(OP_SendLoginInfo)
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_ZoneSpawns, sizeof(structs::Spawn_Struct)*entrycount);
 		outapp->size = DeflatePacket((unsigned char*)out->pBuffer, out->size, outapp->pBuffer, sizeof(structs::Spawn_Struct)*entrycount);
 		EncryptTrilogyZoneSpawnPacket(outapp->pBuffer, outapp->size);
-		delete[] __emu_buffer;
+		delete in;
 		delete out;
 		result->SetPacket(&outapp, reliable);
 
@@ -1314,8 +1323,8 @@ DECODE(OP_SendLoginInfo)
 			new_list->Guilds[i].unknown1 = 0xFFFFFFFF;
 			new_list->Guilds[i].unknown3 = 0xFFFFFFFF;
 		};
-		delete[] __emu_buffer;
-		result->SetPacket(&outapp);
+		delete in;
+		result->SetPacket(&outapp, reliable);
 
 	}
 
@@ -1539,6 +1548,10 @@ DECODE(OP_SendLoginInfo)
 		OUT(force);
 		OUT(sequence);
 		OUT(pushup_angle);
+
+		LogInfo("Trilogy ENCODE(OP_Damage): Target: {}, Source: {}, Type: {}, Spell: {}, Dmg: {}, Force: {:.2f}, Seq: {:.2f}",
+			eq->target, eq->source, static_cast<int>(eq->type), eq->spellid, eq->damage, eq->force, eq->sequence);
+
 		FINISH_ENCODE();
 	}
 
@@ -1564,6 +1577,10 @@ DECODE(OP_SendLoginInfo)
 			eq->spell = emu->spell;
 		eq->buff_unknown = emu->buff_unknown;
 		eq->sequence = emu->sequence;
+
+		LogInfo("Trilogy ENCODE(OP_Action): Target: {}, Source: {}, Level: {}, Type: {}, Spell: {}, Force: {:.2f}, Seq: {:.2f}",
+			eq->target, eq->source, eq->level, static_cast<int>(eq->type), eq->spell, eq->force, eq->sequence);
+
 		FINISH_ENCODE();
 	}
 
@@ -1675,10 +1692,10 @@ DECODE(OP_SendLoginInfo)
 			if (outapp->size != sizeof(structs::Item_Struct))
 				LogNetcodeDetail("Invalid size on OP_ItemPacket packet. Expected: {}, Got: {}", sizeof(structs::Item_Struct), outapp->size);
 
-			result->SetPacket(&outapp);
+			result->SetPacket(&outapp, reliable);
 			safe_delete_array(trilogy_item);
-			delete[] __emu_buffer;
 		}
+		delete in;
 	}
 
 	ENCODE(OP_TradeItemPacket)
@@ -1713,9 +1730,10 @@ DECODE(OP_SendLoginInfo)
 			if (outapp->size != sizeof(structs::TradeItemsPacket_Struct))
 				LogNetcodeDetail("Invalid size on OP_TradeItemPacket packet. Expected: {}, Got: {}", sizeof(structs::TradeItemsPacket_Struct), outapp->size);
 
-			result->SetPacket(&outapp);
-			delete[] __emu_buffer;
+			result->SetPacket(&outapp, reliable);
+			safe_delete_array(trilogy_item);
 		}
+		delete in;
 	}
 
 	ENCODE(OP_CharInventory)
@@ -1744,7 +1762,6 @@ DECODE(OP_SendLoginInfo)
 		//do the transform...
 		std::string trilogy_item_string;
 		int r;
-		//std::string trilogy_item_string;
 		for (r = 0; r < itemcount; r++, eq++)
 		{
 			structs::Item_Struct* trilogy_item = TrilogyItem((EQ::ItemInstance*)eq->inst, eq->slot_id);
@@ -1753,7 +1770,7 @@ DECODE(OP_SendLoginInfo)
 			{
 				char *trilogy_item_char = reinterpret_cast<char*>(trilogy_item);
 				trilogy_item_string.append(trilogy_item_char, sizeof(structs::Item_Struct));
-				safe_delete(trilogy_item);
+				safe_delete_array(trilogy_item);
 			}
 		}
 		int32 length = 5000;
@@ -1765,8 +1782,8 @@ DECODE(OP_SendLoginInfo)
 		outapp->pBuffer[0] = itemcount;
 		safe_delete_array(pi);
 
-		result->SetPacket(&outapp);
-		delete[] __emu_buffer;
+		result->SetPacket(&outapp, reliable);
+		delete in;
 	}
 
 	ENCODE(OP_ShopInventoryPacket)
@@ -1853,6 +1870,10 @@ DECODE(OP_SendLoginInfo)
 		OUT(spawn_id);
 		OUT(cur_hp);
 		OUT(max_hp);
+
+		LogInfo("Trilogy ENCODE(OP_HPUpdate): spawn_id: {}, cur_hp: {}, max_hp: {}",
+			eq->spawn_id, eq->cur_hp, eq->max_hp);
+
 		FINISH_ENCODE();
 	}
 
@@ -1874,6 +1895,12 @@ DECODE(OP_SendLoginInfo)
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
+		if (in->size < sizeof(BookText_Struct))
+		{
+			delete in;
+			return;
+		}
+
 		unsigned char *__emu_buffer = in->pBuffer;
 		BookText_Struct *emu_BookText_Struct = (BookText_Struct *)__emu_buffer;
 		in->size = sizeof(structs::BookText_Struct) + strlen(emu_BookText_Struct->booktext);
@@ -1885,7 +1912,6 @@ DECODE(OP_SendLoginInfo)
 
 		delete[] __emu_buffer;
 		result->SetPacket(&in, reliable);
-
 	}
 
 	DECODE(OP_ReadBook)
@@ -2242,8 +2268,8 @@ DECODE(OP_SendLoginInfo)
 			structs::ManaChange_Struct2 *eq = (structs::ManaChange_Struct2 *)outapp->pBuffer;
 			eq->new_mana = emu->new_mana;
 		}
-		delete[] __emu_buffer;
-		result->SetPacket(&outapp);
+		delete __packet;
+		result->SetPacket(&outapp, reliable);
 	}
 
 	ENCODE(OP_DeleteSpawn)
@@ -2251,6 +2277,14 @@ DECODE(OP_SendLoginInfo)
 		SETUP_DIRECT_ENCODE(DeleteSpawn_Struct, structs::DeleteSpawn_Struct);
 		OUT(spawn_id);
 		FINISH_ENCODE();
+	}
+
+	DECODE(OP_DeleteSpawn)
+	{
+		DECODE_LENGTH_EXACT(structs::DeleteSpawn_Struct);
+		SETUP_DIRECT_DECODE(DeleteSpawn_Struct, structs::DeleteSpawn_Struct);
+		IN(spawn_id);
+		FINISH_DIRECT_DECODE();
 	}
 
 	ENCODE(OP_TimeOfDay)
@@ -2475,6 +2509,11 @@ DECODE(OP_SendLoginInfo)
 			strcpy(eq->ItemName, emu->ItemName);
 			FINISH_ENCODE();
 		}
+		else
+		{
+			delete *p;
+			*p = nullptr;
+		}
 	}
 
 	DECODE(OP_Trader)
@@ -2512,6 +2551,10 @@ DECODE(OP_SendLoginInfo)
 			emu->ItemID = eq->SerialNumber;
 			IN(NewPrice);
 			FINISH_DIRECT_DECODE();
+		}
+		else
+		{
+			__packet->SetOpcode(OP_Unknown);
 		}
 	}
 
@@ -2577,6 +2620,10 @@ DECODE(OP_SendLoginInfo)
 			IN(Traders);
 			IN(Items);
 			FINISH_DIRECT_DECODE();
+		}
+		else
+		{
+			__packet->SetOpcode(OP_Unknown);
 		}
 	}
 

@@ -115,6 +115,11 @@ int RDPStream::Send(EQApplicationPacket **packet, bool reliable)
 	LogInfo("RDPStream::Send: emu opcode {:#06x} ({}), EQ opcode {:#06x}, bytes {}, reliable {} -> result {}",
 		encoded->GetOpcode(), OpcodeManager::EmuToName(encoded->GetOpcode()), opcode, bytes, reliable, result);
 
+	if (result != RDPLIB_OK) {
+		LogInfo("RDPStream::Send NON-OK RESULT: result {}, emu opcode {:#06x} ({}), EQ opcode {:#06x}, bytes {}, reliable {}",
+			result, encoded->GetOpcode(), OpcodeManager::EmuToName(encoded->GetOpcode()), opcode, bytes, reliable);
+	}
+
 	delete[] data;
 	return result;
 }
@@ -176,10 +181,14 @@ RDPStream::ReceiveResult RDPStream::Receive(EQApplicationPacket **packet, uint32
 
 		if (result == RDPConnection::NoData)
 			return NoData;
-		if (result == RDPConnection::PeerClosed)
+		if (result == RDPConnection::PeerClosed) {
+			LogInfo("RDPStream::Receive: PeerClosed (disconnect_reason={:#010x})", disconnect_reason ? *disconnect_reason : 0);
 			return PeerClosed;
-		if (result == RDPConnection::ConnectionLost)
+		}
+		if (result == RDPConnection::ConnectionLost) {
+			LogInfo("RDPStream::Receive: ConnectionLost (disconnect_reason={:#010x})", disconnect_reason ? *disconnect_reason : 0);
 			return ConnectionLost;
+		}
 
 		uint32 bytes = message.Size();
 		const uint8 *data = message.Data();

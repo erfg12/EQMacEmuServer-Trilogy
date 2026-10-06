@@ -340,6 +340,9 @@ int Client::HandlePacket(const EQApplicationPacket *app)
 		ClientPacketProc p;
 		p = ConnectedOpcodes[opcode];
 		if(p == nullptr) { 
+			LogInfo("[Client: {}] Unhandled Connected Opcode: {:#06x} ({}), Size: {}",
+				GetName(), opcode, OpcodeManager::EmuToName(opcode), app->size);
+
 			std::vector<std::any> args;
 			args.push_back(const_cast<EQApplicationPacket*>(app));
 			parse->EventPlayer(EVENT_UNHANDLED_OPCODE, this, "", 0, &args);
@@ -1990,6 +1993,9 @@ void Client::Handle_OP_AutoAttack(const EQApplicationPacket *app)
 		LogError("OP size error: OP_AutoAttack expected : [4] got : [{}]", app->size);
 		return;
 	}
+
+	LogInfo("[Client: {}] Handle_OP_AutoAttack: state={}, target={}",
+		GetName(), static_cast<int>(app->pBuffer[0]), GetTarget() ? GetTarget()->GetName() : "None");
 
 	if (app->pBuffer[0] == 0) {
 		auto_attack = false;
@@ -8860,6 +8866,12 @@ void Client::Handle_OP_YellForHelp(const EQApplicationPacket *app)
 
 void Client::Handle_OP_ZoneEntryResend(const EQApplicationPacket *app)
 {
+	if (m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_Trilogy || m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_MacPC) {
+		auto outapp = app->Copy();
+		QueuePacket(outapp);
+		return;
+	}
+
 	//EQMac doesn't reply to this according to ShowEQ captures.
 	return;
 }

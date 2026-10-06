@@ -3086,6 +3086,11 @@ void Mob::GenerateDamagePackets(Mob* attacker, bool FromDamageShield, int32 dama
 		}
 	}
 
+	LogInfo("Combat Damage Packet: Attacker [{}] (ID: {}) -> Target [{}] (ID: {}), Dmg: {}, Skill: {}, Spell: {}, Force: {:.2f}, Seq: {:.2f}",
+		attacker ? attacker->GetName() : "None", attacker_id,
+		GetName(), GetID(),
+		damage, static_cast<int>(skill_id), spell_id, a->force, a->sequence);
+
 	if (spell_id != SPELL_UNKNOWN)
 		LogSpellsDetail("Sending Damage packet for spell [{}]", spell_id);
 
