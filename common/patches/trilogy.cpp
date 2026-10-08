@@ -2361,6 +2361,7 @@ DECODE(OP_SendLoginInfo)
 	{
 		SETUP_DIRECT_ENCODE(DeleteSpawn_Struct, structs::DeleteSpawn_Struct);
 		OUT(spawn_id);
+		LogInfo("Trilogy ENCODE(OP_DeleteSpawn): Spawn: {}", eq->spawn_id);
 		FINISH_ENCODE();
 	}
 
@@ -2757,10 +2758,15 @@ DECODE(OP_SendLoginInfo)
 		OUT(spawn_id);
 		OUT(killer_id);
 		OUT(corpseid);
+		OUT(spawn_level);
+		OUT(unknown007);
 		OUT(spell_id);
 		OUT(attack_skill);
-		eq->damage = static_cast<uint16>(emu->damage);
+		eq->unknown011 = emu->unknonw011;
+		eq->damage = emu->damage;
 		OUT(is_PC);
+		LogInfo("Trilogy ENCODE(OP_Death): Spawn: {}, Killer: {}, Corpse: {}, Spell: {}, Skill: {}, Dmg: {}, is_PC: {}",
+			eq->spawn_id, eq->killer_id, eq->corpseid, eq->spell_id, eq->attack_skill, eq->damage, eq->is_PC);
 		FINISH_ENCODE();
 	}
 
