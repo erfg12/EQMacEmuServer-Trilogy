@@ -1661,10 +1661,59 @@ DECODE(OP_SendLoginInfo)
 
 	DECODE(OP_GMEndTraining)
 	{
+		if (__packet->size == sizeof(structs::GMTrainee_Struct))
+		{
+			SETUP_DIRECT_DECODE(GMTrainEnd_Struct, structs::GMTrainee_Struct);
+			emu->npcid = eq->npcid;
+			emu->playerid = eq->playerid;
+			FINISH_DIRECT_DECODE();
+			return;
+		}
 		DECODE_LENGTH_EXACT(structs::GMTrainEnd_Struct);
 		SETUP_DIRECT_DECODE(GMTrainEnd_Struct, structs::GMTrainEnd_Struct);
 		IN(npcid);
 		IN(playerid);
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GMTraining)
+	{
+		DECODE_LENGTH_EXACT(structs::GMTrainee_Struct);
+		SETUP_DIRECT_DECODE(GMTrainee_Struct, structs::GMTrainee_Struct);
+		MEMSET_IN(GMTrainee_Struct);
+		emu->npcid = eq->npcid;
+		emu->playerid = eq->playerid;
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_GMTraining)
+	{
+		ENCODE_LENGTH_EXACT(GMTrainee_Struct);
+		SETUP_DIRECT_ENCODE(GMTrainee_Struct, structs::GMTrainee_Struct);
+		eq->npcid = emu->npcid;
+		eq->playerid = emu->playerid;
+		for (int sk = 0; sk < 73; sk++) {
+			eq->highesttrain[sk] = (uint8)emu->skills[sk];
+		}
+		memset(eq->unknown, 1, sizeof(eq->unknown));
+		for (int l = 0; l < 24; l++) {
+			eq->highesttrainLang[l] = emu->language[l] > 100 ? 100 : (uint8)emu->language[l];
+		}
+		memset(eq->unknown2, 0, sizeof(eq->unknown2));
+		FINISH_ENCODE();
+	}
+
+	DECODE(OP_GMTrainSkill)
+	{
+		DECODE_LENGTH_EXACT(structs::GMSkillChange_Struct);
+		SETUP_DIRECT_DECODE(GMSkillChange_Struct, structs::GMSkillChange_Struct);
+		MEMSET_IN(GMSkillChange_Struct);
+		emu->npcid = eq->npcid;
+		emu->playerid = 0;
+		emu->skillbank = eq->skillbank;
+		emu->unknown2 = 0;
+		emu->skill_id = eq->skill_id;
+		emu->unknown3 = 0;
 		FINISH_DIRECT_DECODE();
 	}
 

@@ -1763,15 +1763,13 @@ namespace Trilogy {
 
 		struct GMTrainee_Struct
 		{
-			//       uint16 unknown0; //Always seems to be 0x9c 0x40
-			/*000*/ uint16 npcid;
-			/*002*/	uint32 playerid;
-			/*006*/ uint16 skills[73];
-			/*079*/ uint8  unknown[52];
-			/*131*/	uint16 unknown1;
-			/*133*/	uint8  unknown2;
-			/*134*/	uint8  ending[37];
-			/*171*/
+			/*000*/ uint32 npcid;
+			/*004*/ uint32 playerid;
+			/*008*/ uint8  highesttrain[73]; // Highest value for each skill a trainer can train you to.
+			/*081*/ uint8  unknown[32];      // One of these bits is required to open the train dialog (set to 1)
+			/*113*/ uint8  highesttrainLang[24]; // Max language skill a trainer can teach you
+			/*137*/ uint8  unknown2[11];     // Unknown
+			/*148*/
 		};
 
 		struct GMTrainEnd_Struct
