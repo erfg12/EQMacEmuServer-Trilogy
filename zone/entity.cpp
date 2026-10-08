@@ -1101,6 +1101,9 @@ bool EntityList::SendZoneDoorsBulk(EQApplicationPacket* app, Client *client)
 
 void EntityList::SendZoneDoors(Client *client)
 {
+	// Temporarily disabled doors spawning in
+	return;
+
 	uint32 mask_test = client->ClientVersionBit();
 	EQApplicationPacket app;
 	auto it = door_list.begin();

@@ -1830,9 +1830,6 @@ DECODE(OP_SendLoginInfo)
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
-		//store away the emu struct
-		unsigned char *__emu_buffer = in->pBuffer;
-
 		int16 itemcount = in->size / sizeof(EQ::InternalSerializedItem_Struct);
 		if (itemcount == 0 || (in->size % sizeof(EQ::InternalSerializedItem_Struct)) != 0)
 		{
@@ -1840,18 +1837,17 @@ DECODE(OP_SendLoginInfo)
 			delete in;
 			return;
 		}
-		if (itemcount > 40)
-			itemcount = 40;
+		if (itemcount > 80)
+			itemcount = 80;
 
 		EQ::InternalSerializedItem_Struct *eq = (EQ::InternalSerializedItem_Struct *)in->pBuffer;
 		//do the transform...
-		std::string trilogy_item_string;
-		int r = 0;
-		for (r = 0; r < itemcount; r++, eq++)
+		for (int r = 0; r < itemcount; r++, eq++)
 		{
-			structs::Item_Struct* trilogy_item = TrilogyItem((EQ::ItemInstance*)eq->inst, eq->slot_id, 1);
+			EQ::ItemInstance *cur = (EQ::ItemInstance*)eq->inst;
+			structs::Item_Struct* trilogy_item = TrilogyItem(cur, eq->slot_id, 1);
 
-			if (trilogy_item != 0)
+			if (trilogy_item != nullptr)
 			{
 				int pisize = ITEM_STRUCT_SIZE;
 				if (trilogy_item->ItemClass == EQ::item::ItemClassBook)
@@ -1863,15 +1859,17 @@ DECODE(OP_SendLoginInfo)
 				outapp->SetOpcode(OP_ShopInventoryPacket);
 				outapp->size = pisize + 5;
 				outapp->pBuffer = new unsigned char[outapp->size];
+				memset(outapp->pBuffer, 0, outapp->size);
 				structs::MerchantItems_Struct* pi = (structs::MerchantItems_Struct*) outapp->pBuffer;
 				memcpy(&pi->item, trilogy_item, pisize);
 				pi->itemtype = trilogy_item->ItemClass;
-				result->SetPacket(&outapp);
+				result->SetPacket(&outapp, reliable);
 
-				safe_delete(trilogy_item);
+				safe_delete_array(trilogy_item);
 			}
+			safe_delete(cur);
 		}
-		delete[] __emu_buffer;
+		delete in;
 	}
 
 	DECODE(OP_DeleteCharge) { DECODE_FORWARD(OP_MoveItem); }
