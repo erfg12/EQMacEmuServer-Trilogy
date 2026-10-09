@@ -3241,7 +3241,7 @@ void Mob::GenerateDeathPackets(Mob* killerMob, int32 damage, uint16 spell, uint8
 	uint16 out_spell = spell == SPELL_UNKNOWN ? 0xffffffff : spell;
 	int32 out_damage = damage;
 	uint32 out_killer = killerMob ? killerMob->GetID() : 0;
-	uint32 out_corpseid = 0;
+	uint32 out_corpseid = GetID();
 
 	bool hideme = killerMob && killerMob->IsClient() && killerMob->CastToClient()->GMHideMe();
 	if (hideme)
@@ -3252,11 +3252,6 @@ void Mob::GenerateDeathPackets(Mob* killerMob, int32 damage, uint16 spell, uint8
 	if (FromDamageShield && killerMob)
 	{
 		out_skill = killerMob->GetMobDamageShieldType();
-	}
-
-	if (IsClient())
-	{
-		out_corpseid = GetID();
 	}
 
 	// This causes the generic "You died." generic message if there is no killerid sent.
@@ -3275,12 +3270,15 @@ void Mob::GenerateDeathPackets(Mob* killerMob, int32 damage, uint16 spell, uint8
 
 	auto app = new EQApplicationPacket(OP_Death, sizeof(Death_Struct));
 	Death_Struct* d = (Death_Struct*)app->pBuffer;
+	memset(d, 0, sizeof(Death_Struct));
 	d->spawn_id = GetID();
 	d->killer_id = out_killer;
 	d->corpseid = out_corpseid;
 	d->spell_id = out_spell;
 	d->attack_skill = out_skill;
 	d->damage = out_damage;
+	d->spawn_level = GetLevel();
+	d->is_PC = IsClient() ? 1 : 0;
 	app->priority = 6;
 
 	Mob* packetsender = this;

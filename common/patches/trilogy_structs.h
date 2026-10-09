@@ -642,17 +642,15 @@ namespace Trilogy {
 
 		struct Death_Struct
 		{
-			/*000*/	uint16	spawn_id;
-			/*002*/	uint16	killer_id;
-			/*004*/	uint16	corpseid;
-			/*006*/	uint8	spawn_level;
-			/*007*/	uint8	unknown007;
-			/*008*/	int16	spell_id;
-			/*010*/	uint8	attack_skill;
-			/*011*/	uint8	unknown011;
-			/*012*/	int32	damage;
-			/*016*/	uint8	is_PC;
-			/*017*/	uint8	unknown015[3];
+			/*000*/	uint32	spawn_id;		// Comment: 
+			/*004*/	uint32	killer_id;		// Comment: 
+			/*008*/	uint32	corpseid;		// Comment: corpseid used for looting PC corpses !
+			/*012*/	uint16	spell_id;		// Comment: 
+			/*014*/	uint8	attack_skill;		// Comment: 
+			/*015*/ uint8	unknown015;
+			/*016*/	uint16	damage;			// Comment: Damage taken, (Confirmed )
+			/*018*/ uint8   is_PC;		// Comment: 
+			/*019*/ uint8   unknown017;
 			/*020*/
 		};
 
