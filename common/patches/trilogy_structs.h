@@ -1745,20 +1745,20 @@ namespace Trilogy {
 
 		// This is where the Text is sent to the client.
 		// Use ` as a newline character in the text.
-		// Variable length.
+		// In Trilogy, text starts directly at offset 0 (no type byte).
+		// Variable length, null-terminated.
 		struct BookText_Struct
 		{
 			/*000*/	uint8 type;		//type: 0=scroll, 1=book, 2=item info.. prolly others.
-			/*001*/	char booktext[1]; // Variable Length
+			/*000*/	char booktext[1]; // Variable Length
 		};
 
 		// This is the request to read a book.
-		// This is just a "text file" on the server
-		// or in our case, the 'name' column in our books table.
+		// In Trilogy, the client sends the txtfile name starting at offset 0,
+		// followed by a null-terminator and BookType.
 		struct BookRequest_Struct
 		{
-			/*000*/	uint8 type;		//type: 0=scroll, 1=book, 2=item info.. prolly others.
-			/*001*/	char txtfile[1]; // Variable
+			/*000*/	char txtfile[14]; // Variable
 		};
 
 		struct GMTrainee_Struct

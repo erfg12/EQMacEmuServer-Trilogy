@@ -1988,12 +1988,16 @@ DECODE(OP_SendLoginInfo)
 
 		unsigned char *__emu_buffer = in->pBuffer;
 		BookText_Struct *emu_BookText_Struct = (BookText_Struct *)__emu_buffer;
-		in->size = sizeof(structs::BookText_Struct) + strlen(emu_BookText_Struct->booktext);
+		size_t txtlen = strlen(emu_BookText_Struct->booktext);
+
+		// In Trilogy, text starts directly at offset 0 (no type byte)
+		in->size = sizeof(structs::BookText_Struct) + txtlen;
 		in->pBuffer = new unsigned char[in->size];
 		structs::BookText_Struct *eq_BookText_Struct = (structs::BookText_Struct*)in->pBuffer;
 
-		eq_BookText_Struct->type = emu_BookText_Struct->type;
-		strcpy(eq_BookText_Struct->booktext, emu_BookText_Struct->booktext);
+		memcpy(eq_BookText_Struct->booktext, emu_BookText_Struct->booktext, txtlen + 1);
+
+		LogInfo("ENCODE(OP_ReadBook): encoded {} bytes of book text starting at offset 0: \"{:.60}...\"", in->size, eq_BookText_Struct->booktext);
 
 		delete[] __emu_buffer;
 		result->SetPacket(&in, reliable);
@@ -2001,13 +2005,34 @@ DECODE(OP_SendLoginInfo)
 
 	DECODE(OP_ReadBook)
 	{
-		DECODE_LENGTH_ATLEAST(structs::BookRequest_Struct);
-		SETUP_DIRECT_DECODE(BookRequest_Struct, structs::BookRequest_Struct);
+		CHECK_DECODE_NULLPTR(__packet->pBuffer);
+		if (__packet->size < 1)
+		{
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
 
-		IN(type);
-		strn0cpy(emu->txtfile, eq->txtfile, sizeof(emu->txtfile));
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		size_t eq_size = __packet->size;
 
-		FINISH_DIRECT_DECODE();
+		__packet->size = sizeof(BookRequest_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size];
+		memset(__packet->pBuffer, 0, sizeof(BookRequest_Struct));
+		BookRequest_Struct *emu = (BookRequest_Struct *)__packet->pBuffer;
+
+		// In Trilogy, txtfile starts at offset 0
+		strn0cpy(emu->txtfile, (const char *)__eq_buffer, sizeof(emu->txtfile));
+
+		// BookType is at the end of the packet, after the null-terminated string
+		size_t txtlen = strlen(emu->txtfile);
+		if (txtlen + 1 < eq_size)
+		{
+			emu->type = *(uint8 *)(__eq_buffer + txtlen + 1);
+		}
+
+		LogInfo("DECODE(OP_ReadBook): eq_size={}, txtfile='{}', type={}", eq_size, emu->txtfile, emu->type);
+
+		delete[] __eq_buffer;
 	}
 
 	ENCODE(OP_Illusion)
