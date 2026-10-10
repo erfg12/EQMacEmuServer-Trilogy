@@ -226,7 +226,6 @@ public:
 	void	ClearAreas();
 	void	ReloadMerchants();
 	void	ProcessProximitySay(const char *Message, Client *c, uint8 language = 0);
-	Doors *FindDoor(uint32 door_id);
 	Doors *FindDoor(uint8 door_id);
 	Doors *FindDoorByDBID(uint32 db_id);
 	Doors	*FindNearestDoor(Client* c);

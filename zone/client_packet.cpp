@@ -703,7 +703,16 @@ void Client::Handle_Connect_OP_ReqClientSpawn(const EQApplicationPacket *app)
 {
 	conn_state = ClientSpawnRequested;
 
-	entity_list.SendZoneDoors(this);
+	if (ClientVersion() == EQ::versions::ClientVersion::Mac){
+		auto outapp = new EQApplicationPacket;
+		if (entity_list.SendZoneDoorsBulk(outapp, this))
+		{
+			QueuePacket(outapp);
+		}
+		safe_delete(outapp);
+	} else {
+		entity_list.SendZoneDoors(this);
+	}
 
 	entity_list.SendZoneObjects(this);
 	SendZonePoints();
@@ -2714,7 +2723,7 @@ void Client::Handle_OP_ClickDoor(const EQApplicationPacket *app)
 		GetName(), cd->doorid, cd->item_id, cd->player_id);
 
 	Doors* currentdoor = entity_list.FindDoor(cd->doorid);
-	if (!currentdoor)
+	if (!currentdoor && ClientVersion() == EQ::versions::ClientVersion::Trilogy)
 	{
 		currentdoor = entity_list.FindNearestDoor(this);
 		if (currentdoor) {

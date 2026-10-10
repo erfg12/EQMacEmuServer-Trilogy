@@ -1958,9 +1958,10 @@ struct DoorSpawns_Struct	//SEQ
  Size:		8
 */
 struct ClickDoor_Struct {
-	/*000*/	uint32	doorid;
-	/*004*/	uint32	item_id;
-	/*008*/	uint32	player_id;
+	/*000*/	uint8	doorid;
+	/*001*/	uint8	unknown[3];
+	/*004*/	uint16	item_id;
+	/*006*/	uint16	player_id;
 };
 
 struct MoveDoor_Struct {

@@ -967,50 +967,14 @@ void EntityList::ListDoors(Client* c)
 	return;
 }
 
-Doors *EntityList::FindDoor(uint32 door_id)
-{
-	if (door_list.empty())
-		return nullptr;
-
-	auto it = door_list.begin();
-	while (it != door_list.end()) {
-		if (it->second && it->second->GetDoorID() == door_id)
-			return it->second;
-		++it;
-	}
-
-	// Fallback to database ID
-	it = door_list.begin();
-	while (it != door_list.end()) {
-		if (it->second && it->second->GetDoorDBID() == door_id)
-			return it->second;
-		++it;
-	}
-
-	// Fallback to entity ID
-	it = door_list.begin();
-	while (it != door_list.end()) {
-		if (it->second && it->second->GetEntityID() == door_id)
-			return it->second;
-		++it;
-	}
-
-	return nullptr;
-}
-
 Doors *EntityList::FindDoor(uint8 door_id)
 {
-	return FindDoor(static_cast<uint32>(door_id));
-}
-
-Doors *EntityList::FindDoorByDBID(uint32 db_id)
-{
-	if (door_list.empty())
+	if (door_id < 0 || door_list.empty())
 		return nullptr;
 
 	auto it = door_list.begin();
 	while (it != door_list.end()) {
-		if (it->second && it->second->GetDoorDBID() == db_id)
+		if (it->second->GetDoorID() == door_id)
 			return it->second;
 		++it;
 	}
@@ -2482,7 +2446,18 @@ void EntityList::RespawnAllDoors()
 	auto it = client_list.begin();
 	while (it != client_list.end()) {
 		if (it->second) {
-			SendZoneDoors(it->second);
+			if (it->second->ClientVersion() == EQ::versions::ClientVersion::Mac) {
+				auto outapp = new EQApplicationPacket();
+				if (SendZoneDoorsBulk(outapp, it->second)) {
+					it->second->FastQueuePacket(&outapp);
+				}
+				else {
+					safe_delete(outapp);
+				}
+			}
+			else { // Trilogy
+				SendZoneDoors(it->second);
+			}
 		}
 		++it;
 	}
