@@ -951,7 +951,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 
 	// The auth version bit distinguishes Windows, Intel Mac, PPC, and Trilogy clients.
 	m_ClientVersionBit = versionbit;
-	if (m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_Trilogy || m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_MacPC) {
+	if (m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_Trilogy) {
 		SetClientVersion(EQ::versions::ClientVersion::Trilogy);
 	} else {
 		SetClientVersion(EQ::versions::ClientVersion::Mac);
@@ -8879,7 +8879,7 @@ void Client::Handle_OP_YellForHelp(const EQApplicationPacket *app)
 
 void Client::Handle_OP_ZoneEntryResend(const EQApplicationPacket *app)
 {
-	if (m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_Trilogy || m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_MacPC) {
+	if (m_ClientVersionBit == EQ::versions::ClientVersionBit::bit_Trilogy) {
 		auto outapp = app->Copy();
 		QueuePacket(outapp);
 		return;

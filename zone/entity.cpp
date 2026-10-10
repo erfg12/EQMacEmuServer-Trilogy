@@ -418,6 +418,38 @@ void EntityList::DoorProcess()
 		}
 		++it;
 	}
+
+	// Constantly loop through all spawned doors every 3 seconds to open and close them
+	/*
+	static Timer test_door_timer(3000);
+	if (test_door_timer.Check()) {
+		for (auto &pair : door_list) {
+			Doors *d = pair.second;
+			if (!d)
+				continue;
+
+			bool will_open = !d->IsDoorOpen();
+			d->SetOpenState(will_open);
+
+			auto outapp = new EQApplicationPacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
+			auto *md = (MoveDoor_Struct*)outapp->pBuffer;
+			md->doorid = d->GetDoorID();
+
+			if (will_open) {
+				md->action = (d->GetInvertState() == 0) ? OPEN_DOOR : OPEN_INVDOOR;
+				Message(0, Chat::White, "I'm opening door id %u (%s)", d->GetDoorID(), d->GetDoorName());
+				LogInfo("I'm opening door id [{}], name=[{}]", d->GetDoorID(), d->GetDoorName());
+			} else {
+				md->action = (d->GetInvertState() == 0) ? CLOSE_DOOR : CLOSE_INVDOOR;
+				Message(0, Chat::White, "I'm closing door id %u (%s)", d->GetDoorID(), d->GetDoorName());
+				LogInfo("I'm closing door id [{}], name=[{}]", d->GetDoorID(), d->GetDoorName());
+			}
+
+			QueueClients(0, outapp, false);
+			safe_delete(outapp);
+		}
+	}
+	*/
 }
 
 void EntityList::ObjectProcess()
@@ -966,6 +998,11 @@ Doors *EntityList::FindDoor(uint32 door_id)
 	return nullptr;
 }
 
+Doors *EntityList::FindDoor(uint8 door_id)
+{
+	return FindDoor(static_cast<uint32>(door_id));
+}
+
 Doors *EntityList::FindDoorByDBID(uint32 db_id)
 {
 	if (door_list.empty())
@@ -1070,8 +1107,8 @@ bool EntityList::SendZoneDoorsBulk(EQApplicationPacket* app, Client *client)
 			nd->inverted = door->GetInvertState();
 			nd->parameter = door->GetDoorParam();
 
-			LogInfo("SendZoneDoorsBulk: door db_id=[{}], door_id=[{}], name=[{}], pos=({:.2f}, {:.2f}, {:.2f}), hdg={:.2f}, size=[{}], opentype=[{}]",
-				door->GetDoorDBID(), door->GetDoorID(), nd->name, position.x, position.y, position.z, position.w, nd->size, door->GetOpenType());
+			LogInfo("SendZoneDoorsBulk: door db_id=[{}], door_id=[{}], name=[{}], pos=({:.2f}, {:.2f}, {:.2f}), hdg={:.2f}, opentype=[{}]",
+				door->GetDoorDBID(), door->GetDoorID(), nd->name, position.x, position.y, position.z, position.w, door->GetOpenType());
 			
 			memcpy(packet+length,doorstruct,sizeof(Door_Struct));
 			length += sizeof(Door_Struct);
@@ -1102,13 +1139,13 @@ bool EntityList::SendZoneDoorsBulk(EQApplicationPacket* app, Client *client)
 void EntityList::SendZoneDoors(Client *client)
 {
 	// Temporarily disabled doors spawning in
-	return;
-
+	//return;
+	
 	uint32 mask_test = client->ClientVersionBit();
 	EQApplicationPacket app;
 	auto it = door_list.begin();
 	while (it != door_list.end()) {
-		if (it->second && (it->second->GetClientVersionMask() & mask_test)) {
+		if (it->second && (it->second->GetClientVersionMask() == 0 || (it->second->GetClientVersionMask() & mask_test))) {
 			it->second->CreateSpawnPacket(&app);
 			LogInfo("SendZoneDoors: door db_id=[{}], door_id=[{}], name=[{}], pos=({:.2f}, {:.2f}, {:.2f}), hdg={:.2f}, size=[{}], opentype=[{}]",
 				it->second->GetDoorDBID(), it->second->GetDoorID(), it->second->GetDoorName(),

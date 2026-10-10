@@ -16,6 +16,7 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 #include "server_manager.h"
+#include "client.h"
 #include "login_server.h"
 #include "login_types.h"
 #include <stdlib.h>
@@ -108,9 +109,16 @@ WorldServer* ServerManager::GetServerByAddress(const std::string& addr, int port
 
 EQApplicationPacket* ServerManager::CreateServerListPacket(Client* c)
 {
-	bool is_pc = (c->GetMacClientVersion() == pc || c->GetMacClientVersion() == trilogy);
-	unsigned int header_size = is_pc ? sizeof(ServerListClassic_Struct) : sizeof(ServerListMac_Struct);
-	unsigned int flags_size = is_pc ? sizeof(ServerListServerFlagsClassic_Struct) : sizeof(ServerListServerFlagsMac_Struct);
+	if (c->IsTrilogy() || c->GetMacClientVersion() == trilogy) {
+		return CreateServerListPacketTrilogy(c);
+	}
+	return CreateServerListPacketMac(c);
+}
+
+EQApplicationPacket* ServerManager::CreateServerListPacketTrilogy(Client* c)
+{
+	unsigned int header_size = sizeof(ServerListClassic_Struct);
+	unsigned int flags_size = sizeof(ServerListServerFlagsClassic_Struct);
 
 	unsigned int packet_size = header_size;
 	unsigned int server_count = 0;
@@ -127,9 +135,6 @@ EQApplicationPacket* ServerManager::CreateServerListPacket(Client* c)
 
 		std::string world_ip = (*iter)->GetConnection()->Handle()->RemoteIP();
 		std::string servername = (*iter)->GetServerLongName();
-		if (!is_pc) {
-			servername.append(" Server");
-		}
 
 		std::string target_ip;
 		if (world_ip.compare(client_ip) == 0 || IpUtil::IsIpInPrivateRfc1918(client_ip)) {
@@ -156,22 +161,12 @@ EQApplicationPacket* ServerManager::CreateServerListPacket(Client* c)
 	}
 
 	unsigned char* data_ptr = outapp->pBuffer;
-	if (is_pc) {
-		ServerListClassic_Struct* sl = (ServerListClassic_Struct*)outapp->pBuffer;
-		sl->numservers = static_cast<uint8>(server_count);
-		sl->unknown1 = 0;
-		sl->unknown2 = 0;
-		sl->showusercount = showcount;
-		data_ptr += sizeof(ServerListClassic_Struct);
-	}
-	else {
-		ServerListMac_Struct* sl = (ServerListMac_Struct*)outapp->pBuffer;
-		sl->numservers = static_cast<uint16>(server_count);
-		sl->padding[0] = 0;
-		sl->padding[1] = 0;
-		sl->showusercount = showcount;
-		data_ptr += sizeof(ServerListMac_Struct);
-	}
+	ServerListClassic_Struct* sl = (ServerListClassic_Struct*)outapp->pBuffer;
+	sl->numservers = static_cast<uint8>(server_count);
+	sl->unknown1 = 0;
+	sl->unknown2 = 0;
+	sl->showusercount = showcount;
+	data_ptr += sizeof(ServerListClassic_Struct);
 
 	iter = m_world_servers.begin();
 	while (iter != m_world_servers.end()) {
@@ -182,9 +177,6 @@ EQApplicationPacket* ServerManager::CreateServerListPacket(Client* c)
 
 		std::string world_ip = (*iter)->GetConnection()->Handle()->RemoteIP();
 		std::string servername = (*iter)->GetServerLongName();
-		if (!is_pc) {
-			servername.append(" Server");
-		}
 
 		std::string target_ip;
 		if (world_ip.compare(client_ip) == 0 || IpUtil::IsIpInPrivateRfc1918(client_ip)) {
@@ -200,21 +192,11 @@ EQApplicationPacket* ServerManager::CreateServerListPacket(Client* c)
 		strcpy((char*)data_ptr, target_ip.c_str());
 		data_ptr += target_ip.size() + 1;
 
-		if (is_pc) {
-			ServerListServerFlagsClassic_Struct* slsf = (ServerListServerFlagsClassic_Struct*)data_ptr;
-			slsf->greenname = 0;
-			slsf->usercount = (*iter)->GetStatus();
-			memset(slsf->unknown, 0, sizeof(slsf->unknown));
-			data_ptr += sizeof(ServerListServerFlagsClassic_Struct);
-		}
-		else {
-			ServerListServerFlagsMac_Struct* slsf = (ServerListServerFlagsMac_Struct*)data_ptr;
-			slsf->greenname = 0;
-			slsf->flags = 0x1;
-			slsf->worldid = (*iter)->GetServerId();
-			slsf->usercount = (*iter)->GetStatus();
-			data_ptr += sizeof(ServerListServerFlagsMac_Struct);
-		}
+		ServerListServerFlagsClassic_Struct* slsf = (ServerListServerFlagsClassic_Struct*)data_ptr;
+		slsf->greenname = 0;
+		slsf->usercount = (*iter)->GetStatus();
+		memset(slsf->unknown, 0, sizeof(slsf->unknown));
+		data_ptr += sizeof(ServerListServerFlagsClassic_Struct);
 
 		++iter;
 	}
@@ -224,6 +206,98 @@ EQApplicationPacket* ServerManager::CreateServerListPacket(Client* c)
 	slef->admin = 0;
 	slef->kunark = 1;
 	slef->velious = 1;
+
+	return outapp;
+}
+
+EQApplicationPacket* ServerManager::CreateServerListPacketMac(Client* c)
+{
+	unsigned int packet_size = sizeof(ServerListMac_Struct);
+	unsigned int server_count = 0;
+	in_addr in;
+	in.s_addr = c->GetIP();
+	std::string client_ip = inet_ntoa(in);
+
+	auto iter = m_world_servers.begin();
+	while (iter != m_world_servers.end()) {
+		if ((*iter)->IsAuthorized() == false) {
+			++iter;
+			continue;
+		}
+
+		std::string world_ip = (*iter)->GetConnection()->Handle()->RemoteIP();
+		std::string servername = (*iter)->GetServerLongName();
+		servername.append(" Server");
+
+		std::string target_ip;
+		if (world_ip.compare(client_ip) == 0 || IpUtil::IsIpInPrivateRfc1918(client_ip)) {
+			target_ip = (*iter)->GetLocalIP();
+		}
+		else {
+			target_ip = (*iter)->GetRemoteIP();
+		}
+
+		packet_size += servername.size() + 1 + target_ip.size() + 1 + sizeof(ServerListServerFlagsMac_Struct);
+		server_count++;
+		++iter;
+	}
+
+	packet_size += sizeof(ServerListEndFlags_Struct);
+	packet_size += 1;
+
+	auto outapp = new EQApplicationPacket(OP_ServerListRequest, packet_size);
+	memset(outapp->pBuffer, 0, packet_size);
+
+	ServerListMac_Struct* sl = (ServerListMac_Struct*)outapp->pBuffer;
+	sl->numservers = static_cast<uint16>(server_count);
+	sl->padding[0] = 0;
+	sl->padding[1] = 0;
+	uint8 showcount = 0x0;
+	if (server.options.IsShowPlayerCountEnabled()) {
+		showcount = 0xFF;
+	}
+	sl->showusercount = showcount;
+
+	unsigned char* data_ptr = outapp->pBuffer;
+	data_ptr += sizeof(ServerListMac_Struct);
+
+	iter = m_world_servers.begin();
+	while (iter != m_world_servers.end()) {
+		if ((*iter)->IsAuthorized() == false) {
+			++iter;
+			continue;
+		}
+
+		std::string world_ip = (*iter)->GetConnection()->Handle()->RemoteIP();
+		std::string servername = (*iter)->GetServerLongName();
+		servername.append(" Server");
+
+		std::string target_ip;
+		if (world_ip.compare(client_ip) == 0 || IpUtil::IsIpInPrivateRfc1918(client_ip)) {
+			target_ip = (*iter)->GetLocalIP();
+		}
+		else {
+			target_ip = (*iter)->GetRemoteIP();
+		}
+
+		strcpy((char*)data_ptr, servername.c_str());
+		data_ptr += (servername.size() + 1);
+
+		strcpy((char*)data_ptr, target_ip.c_str());
+		data_ptr += (target_ip.size() + 1);
+
+		ServerListServerFlagsMac_Struct* slsf = (ServerListServerFlagsMac_Struct*)data_ptr;
+		slsf->greenname = 0;
+		slsf->flags = 0x1;
+		slsf->worldid = (*iter)->GetServerId();
+		slsf->usercount = (*iter)->GetStatus();
+		data_ptr += sizeof(ServerListServerFlagsMac_Struct);
+		++iter;
+	}
+
+	ServerListEndFlags_Struct* slef = (ServerListEndFlags_Struct*)data_ptr;
+	memset(slef, 0, sizeof(ServerListEndFlags_Struct));
+	slef->admin = 0;
 
 	return outapp;
 }

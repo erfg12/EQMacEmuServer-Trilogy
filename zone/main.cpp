@@ -488,7 +488,7 @@ int main(int argc, char** argv) {
 						{
 							uint32 remote_ip = *(uint32*)remote_address;
 							uint32 version_bit = zone ? zone->GetAuthVersionByIP(remote_ip) : 0;
-							if (version_bit == EQ::versions::ClientVersionBit::bit_Trilogy || version_bit == EQ::versions::ClientVersionBit::bit_MacPC) {
+							if (version_bit == EQ::versions::ClientVersionBit::bit_Trilogy) {
 								stream->SetTranslator(Patches::GetTranslator(EQ::versions::ClientVersion::Trilogy));
 							}
 						}

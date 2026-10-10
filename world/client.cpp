@@ -265,8 +265,7 @@ bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
 			cle->SetOnline();
 		
 		// Check for Trilogy or Mac client versions and assign the stream's packet translator.
-		if (cle->GetMacClientVersion() == EQ::versions::ClientVersionBit::bit_Trilogy ||
-		    cle->GetMacClientVersion() == EQ::versions::ClientVersionBit::bit_MacPC)
+		if (cle->GetMacClientVersion() == EQ::versions::ClientVersionBit::bit_Trilogy)
 		{
 			m_ClientVersion = EQ::versions::ClientVersion::Trilogy;
 			m_ClientVersionBit = cle->GetMacClientVersion();

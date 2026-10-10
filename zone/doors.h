@@ -9,6 +9,15 @@ class Mob;
 class NPC;
 struct Door;
 
+#ifndef OPEN_DOOR
+#define DOOR_STOP_TRAP 0x00
+#define DOOR_RESET_TRAP 0x01
+#define OPEN_DOOR 0x02
+#define CLOSE_DOOR 0x03
+#define OPEN_INVDOOR 0x03
+#define CLOSE_INVDOOR 0x02
+#endif
+
 class Doors : public Entity
 {
 public:

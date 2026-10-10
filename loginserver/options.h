@@ -72,6 +72,12 @@ public:
 	inline void BannerTicker(std::string t) { m_banner_ticker = t; }
 	inline std::string GetLoginVersion() const { return m_login_version; }
 	inline void LoginVersion(std::string v) { m_login_version = v; }
+	inline std::string GetMacLoginVersion() const { return m_mac_login_version; }
+	inline void MacLoginVersion(std::string v) { m_mac_login_version = v; }
+	inline uint16 GetTrilogyPort() const { return m_trilogy_port; }
+	inline void TrilogyPort(uint16 p) { m_trilogy_port = p; }
+	inline uint16 GetMacPort() const { return m_mac_port; }
+	inline void MacPort(uint16 p) { m_mac_port = p; }
 
 private:
 	bool        m_allow_unregistered;
@@ -93,6 +99,9 @@ private:
 	std::string m_login_password_salt;
 	std::string m_banner_ticker;
 	std::string m_login_version;
+	std::string m_mac_login_version;
+	uint16      m_trilogy_port{5999};
+	uint16      m_mac_port{6000};
 };
 
 #endif

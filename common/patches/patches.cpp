@@ -36,14 +36,14 @@ namespace Patches {
 
 	EQPacketTranslator &GetTranslator(EQ::versions::ClientVersion version)
 	{
-		if (version == EQ::versions::ClientVersion::Trilogy || version == EQ::versions::ClientVersion::MacPC)
+		if (version == EQ::versions::ClientVersion::Trilogy)
 			return trilogy_translator;
 		return mac_translator;
 	}
 
 	EQPacketTranslator &GetTranslatorByBit(uint32 version_bit)
 	{
-		if (version_bit == EQ::versions::ClientVersionBit::bit_Trilogy || version_bit == EQ::versions::ClientVersionBit::bit_MacPC)
+		if (version_bit == EQ::versions::ClientVersionBit::bit_Trilogy)
 			return trilogy_translator;
 		return mac_translator;
 	}
