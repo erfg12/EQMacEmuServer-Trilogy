@@ -353,10 +353,18 @@ bool Client::HandleSendLoginInfoPacket(const EQApplicationPacket *app) {
 
 bool Client::HandleNameApprovalPacket(const EQApplicationPacket *app)
 {
-	if(app->size != sizeof(NameApproval_Struct)) {
-		LogError("Wrong size: HandleNameApprovalPacket, size= [{}], expected [{}]", app->size, sizeof(NameApproval_Struct));
-		return false;
-	}
+	bool valid_size = false;
+    if (m_ClientVersion == EQ::versions::ClientVersion::Trilogy) {
+        valid_size = (app->size == sizeof(NameApproval_Struct));
+    }
+    else {
+        // Mac client sends 76 bytes where app->Size() == 78
+        valid_size = (app->Size() == sizeof(NameApproval_Struct) || app->size == sizeof(NameApproval_Struct));
+    }
+    if (!valid_size) {
+        LogError("Wrong size: HandleNameApprovalPacket, size= [{}], Size= [{}], expected [{}]", app->size, app->Size(), sizeof(NameApproval_Struct));
+        return false;
+    }
 
 	if (GetAccountID() == 0) {
 		LogInfo("Name approval request with no logged in account");
@@ -1396,14 +1404,22 @@ bool Client::CheckCharCreateInfo(CharCreate_Struct *cc)
 	bool found = false;
 	int combos = character_create_race_class_combos.size();
 	for (int i = 0; i < combos; ++i) {
+		bool zone_match = false;
+		if (m_ClientVersion == EQ::versions::ClientVersion::Trilogy) {
+			zone_match = (cc->zone_id == 0 || character_create_race_class_combos[i].Zone == cc->zone_id);
+		}
+		else {
+			zone_match = (character_create_race_class_combos[i].Zone == cc->zone_id);
+		}
+
 		if (character_create_race_class_combos[i].Class == cc->class_ &&
 				character_create_race_class_combos[i].Race == cc->race &&
 				character_create_race_class_combos[i].Deity == cc->deity &&
-				(cc->zone_id == 0 || character_create_race_class_combos[i].Zone == cc->zone_id) &&
+				zone_match &&
 			((currentExpansions & character_create_race_class_combos[i].ExpansionRequired) == character_create_race_class_combos[i].ExpansionRequired || 
 				character_create_race_class_combos[i].ExpansionRequired == 0)) {
 			class_combo = character_create_race_class_combos[i];
-			if (cc->zone_id == 0) {
+			if (m_ClientVersion == EQ::versions::ClientVersion::Trilogy && cc->zone_id == 0) {
 				cc->zone_id = class_combo.Zone;
 			}
 			found = true;
